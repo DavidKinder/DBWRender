@@ -19,7 +19,7 @@ program that shows the ray tracer's output. This version displays the
 image in a window and can optionally save the image out as a PNG file.
 
 David Kinder
-davidk.kinder@virgin.net
+davidk@davidkinder.co.uk
 http://www.davidkinder.co.uk/
 
 
