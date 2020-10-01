@@ -1,3 +1,5 @@
+# DBW-Render
+
 DBW-Render (or DBWRender) is an old ray tracing program, from the late 1980s. David Wecker wrote it on a DEC VAX minicomputer, and ported the result to the Amiga, which is the version I got to play with. Back then ray tracers were still a novelty on home computers, and many spent hours waiting for the image to draw (and further hours defining scenes by manually specifying the location of each geometric shape in a text file).
 
 Given its age, the output from DBW-Render is pretty impressive: for its time, the shadowing algorithm produces very nice results:
