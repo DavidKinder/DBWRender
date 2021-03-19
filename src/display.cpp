@@ -1,8 +1,7 @@
 // Windows display for DBWRender output files
 
-#include <cstdio>
+#include <stdio.h>
 
-#define _WIN32_WINNT 0x0500
 #include <windows.h>
 #include <commctrl.h>
 #include <png.h>
@@ -398,7 +397,7 @@ void createButton(HINSTANCE instance, HFONT font, const char* text, DWORD id, in
 {
 	HWND btn = CreateWindowEx(0,"Button",text,
 		WS_CHILD|WS_VISIBLE|BS_PUSHBUTTON|BS_TEXT,x*buttonWidth,0,buttonWidth,buttonHeight,
-		wnd,(HMENU)id,instance,0);
+		wnd,(HMENU)(DWORD_PTR)id,instance,0);
 	if (btn == 0)
 		fatal("Could not create button");
 	SendMessage(btn,WM_SETFONT,(WPARAM)font,0);
