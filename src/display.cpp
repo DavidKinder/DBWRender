@@ -4,7 +4,8 @@
 
 #include <windows.h>
 #include <commctrl.h>
-#include <png.h>
+#include <shlwapi.h>
+#include <wincodec.h>
 
 #define MAX_LINES 1200
 
@@ -260,36 +261,45 @@ void save(void)
 
 	if (GetSaveFileName(&ofn))
 	{
-		FILE* f = fopen(file,"wb");
-		if (f == 0)
-			fatal("Could not open ouput PNG file");
+		IWICImagingFactory* factory = NULL;
+		if (FAILED(CoCreateInstance(CLSID_WICImagingFactory,NULL,CLSCTX_INPROC_SERVER,IID_IWICImagingFactory,(LPVOID*)&factory)))
+			fatal("Could not create imaging factory");
 
-		png_structp pngp = png_create_write_struct
-			(PNG_LIBPNG_VER_STRING,(png_voidp)0,0,0);
-		if (pngp == 0)
-			fatal("Could not create PNG write structure");
-		png_infop infop = png_create_info_struct(pngp);
-		if (infop == 0)
-			fatal("Could not create PNG info structure");
+		IStream* stream = NULL;
+		if (FAILED(SHCreateStreamOnFileA(file,STGM_WRITE|STGM_CREATE,&stream)))
+			fatal("Could not create output file stream");
 
-		if (setjmp(png_jmpbuf(pngp)))
-			fatal("Could not write PNG file");
+		IWICBitmapEncoder* encoder = NULL;
+		if (FAILED(factory->CreateEncoder(GUID_ContainerFormatPng,NULL,&encoder)))
+			fatal("Could not create encoder");
+		if (FAILED(encoder->Initialize(stream,WICBitmapEncoderNoCache)))
+			fatal("Could not initialize encoder");
 
-		png_init_io(pngp,f);
-		png_set_IHDR(pngp,infop,width,height,8,PNG_COLOR_TYPE_RGB,PNG_INTERLACE_NONE,
-			PNG_COMPRESSION_TYPE_DEFAULT,PNG_FILTER_TYPE_DEFAULT);
-		png_set_bgr(pngp);
+		IWICBitmapFrameEncode* frame = NULL;
+		if (FAILED(encoder->CreateNewFrame(&frame,NULL)))
+			fatal("Could not create frame encoder");
+		if (FAILED(frame->Initialize(NULL)))
+			fatal("Could not initialize frame encoder");
 
-		png_bytep* rows = (png_bytep*)malloc(sizeof(png_bytep)*height);
-		for (int y = 0; y < height; y++)
-			rows[y] = bits+(3*y*width);
-		png_set_rows(pngp,infop,rows);
+		if (FAILED(frame->SetSize(width,height)))
+			fatal("Could not set frame size");
+		WICPixelFormatGUID pixelFormat = GUID_WICPixelFormat24bppRGB;
+		if (FAILED(frame->SetPixelFormat(&pixelFormat)))
+			fatal("Could not set frame pixel format");
+		if (FAILED(frame->WritePixels(height,width*3,height*width*3,bits)))
+			fatal("Could not write pixels");
 
-		png_write_png(pngp,infop,PNG_TRANSFORM_IDENTITY,0);
+		if (FAILED(frame->Commit()))
+			fatal("Could not commit frame");
+		if (FAILED(encoder->Commit()))
+			fatal("Could not commit encoder");
+		if (FAILED(stream->Commit(STGC_DEFAULT)))
+			fatal("Could not commit stream");
 
-		free(rows);
-		png_destroy_write_struct(&pngp,&infop);
-		fclose(f);
+		frame->Release();
+		encoder->Release();
+		stream->Release();
+		factory->Release();
 	}
 }
 
@@ -307,7 +317,7 @@ LRESULT CALLBACK windowProc(HWND wnd, UINT msg, WPARAM wparam, LPARAM lparam)
 			CopyRect(&r,&cr);
 
 			r.bottom = buttonHeight;
-			SetBkColor((HDC)wparam,GetSysColor(COLOR_BTNFACE));
+			SetBkColor((HDC)wparam,GetSysColor(COLOR_WINDOW));
 			ExtTextOut((HDC)wparam,0,0,ETO_OPAQUE,&r,0,0,0);
 
 			r.top = buttonHeight;
@@ -528,6 +538,7 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE, LPSTR cmdLine, int)
 	parseCommandLine(argv,((char*)argv)+(argc*sizeof(char*)),&argc,&nc);
 	argc--;
 
+	CoInitialize(NULL);
 	InitCommonControls();
 	lines = (void**)calloc(MAX_LINES,sizeof (void*));
 

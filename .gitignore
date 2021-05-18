@@ -1,3 +1,6 @@
 *.exe
 *.dll
 *.tmp
+.vs
+Debug
+Release
